@@ -1,5 +1,5 @@
 [workspace]
-members = ["core", "exporter", "gui/egui", "gui/iced"]
+members = ["rmms-engine", "core", "exporter"]
 resolver = "2"
 
 [workspace.package]
