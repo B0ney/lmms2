@@ -5,6 +5,9 @@ pub mod decoder;
 pub mod engine;
 pub mod playback;
 pub mod dsp;
+pub mod adsr;
+pub mod note;
+pub mod midi;
 
 use std::{
     collections::HashMap,
@@ -146,6 +149,15 @@ pub struct Sample {
 //     Multi(Box<[f32]>),
 // }
 
+
+
+
+// impl Default for AudioFrame {
+//     fn default() -> Self {
+//         AudioFrame::Stereo([0.0; 2])
+//     }
+// }
+
 // impl AsRef<[f32]> for AudioFrame {
 //     fn as_ref(&self) -> &[f32] {
 //         match self {
@@ -192,6 +204,7 @@ pub struct Sample {
 //         }
 //     }
 // }
+
 
 #[test]
 fn a() {

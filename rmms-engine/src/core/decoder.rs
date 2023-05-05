@@ -204,17 +204,17 @@ fn h() {
     // );
     // output_to_wav(&processed, "./reverb.wav");
 
-    let a = SymphoniaDecoder::load_from_file("../audio/bgsdgfg-04.ogg");
+    // let a = SymphoniaDecoder::load_from_file("../audio/bgsdgfg-04.ogg");
 
-    let mut a_inverted = a.clone();
-    crate::core::dsp::reverse(&mut a_inverted);
+    // let mut a_inverted = a.clone();
+    // crate::core::dsp::reverse(&mut a_inverted);
     
 
-    // crate::core::dsp::reverse(&mut audio_data);
-    let c = crate::core::dsp::mix(
-        &a,&a_inverted
-    );
-    output_to_wav(&c, "./mixed.wav");
+    // // crate::core::dsp::reverse(&mut audio_data);
+    // let c = crate::core::dsp::mix(
+    //     &a,&a_inverted
+    // );
+    // output_to_wav(&c, "./mixed.wav");
     // dbg!("saving buffer to file...");
     
     // panic!();
