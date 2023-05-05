@@ -12,7 +12,7 @@ enum Event {
     Finished
 }
 
-pub fn test(sample: SampleBuffer) {
+pub fn test(sample: Arc<SampleBuffer>) {
     let host = cpal::default_host();
 
     let device = host
@@ -27,7 +27,7 @@ pub fn test(sample: SampleBuffer) {
     let config = device.default_output_config().unwrap();
     println!("Default output config: {:?}", config);
 
-    run(&device, &config.into(), Arc::new(sample));
+    run(&device, &config.into(), sample);
 }
 
 fn run(device: &cpal::Device, config: &cpal::StreamConfig, sample: Arc<SampleBuffer>) {
@@ -35,11 +35,11 @@ fn run(device: &cpal::Device, config: &cpal::StreamConfig, sample: Arc<SampleBuf
     let channels = config.channels as usize;
 
     // let frame = Arc::new(sample);
-    let mut frame: f32 = 0.0;
+    let mut frame: usize = 0;
 
     let mut next_value = move || {
-        let samples = sample.frame(frame.round() as usize);
-        frame += 1.0;
+        let samples = sample.frame(frame);
+        frame += 1;
         samples
     };
 

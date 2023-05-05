@@ -7,6 +7,8 @@ edition = "2021"
 
 
 [dependencies]
+arrayvec = "0.7.2"
+bytemuck = "1.13.1"
 cpal = "0.15.2"
 hound = "3.5.0"
 once_cell = "1.17.1"
@@ -25,6 +27,7 @@ features = [
     "flac",
     "ogg",
     "vorbis",
+    "adpcm",
     "mp3",
 ]
 

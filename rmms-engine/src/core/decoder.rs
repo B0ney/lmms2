@@ -16,6 +16,8 @@ use symphonia::core::meta::MetadataOptions;
 use symphonia::core::probe::{Hint, Probe};
 use symphonia::core::units::Duration;
 
+use super::SampleCache;
+
 /// Supported formats:
 ///
 /// WAV
@@ -184,10 +186,43 @@ fn output_to_wav(audio_data: &RmmsSampleBuffer, file: impl AsRef<Path>) {
     }
 }
 
+
+
 #[test]
 fn h() {
-    let audio_data = SymphoniaDecoder::load_from_file("../audio/Night-Novae-Vaporwaved-v2.ogg");
+    // let mut audio_data = SymphoniaDecoder::load_from_file("../audio/cobalt-16-mono.ogg").to_stereo();
+
+    // let sfx_no_reverb = SymphoniaDecoder::load_from_file("../audio/sfx_noreverb.wav");
+    // let impulse_response = SymphoniaDecoder::load_from_file("../audio/reverb ir 3.flac");
+    
+    // dbg!(&sfx_no_reverb);
+    // dbg!(&impulse_response);
+
+    // let processed = crate::core::dsp::convolve(
+    //     &sfx_no_reverb,
+    //     &impulse_response,
+    // );
+    // output_to_wav(&processed, "./reverb.wav");
+
+    let a = SymphoniaDecoder::load_from_file("../audio/bgsdgfg-04.ogg");
+
+    let mut a_inverted = a.clone();
+    crate::core::dsp::reverse(&mut a_inverted);
+    
+
+    // crate::core::dsp::reverse(&mut audio_data);
+    let c = crate::core::dsp::mix(
+        &a,&a_inverted
+    );
+    output_to_wav(&c, "./mixed.wav");
     // dbg!("saving buffer to file...");
-    // output_to_wav(&audio_data, "./sine.wav");
-    crate::core::cpal::test(audio_data);
+    
+    // panic!();
+    // let cache = SampleCache::default();
+    // cache.add("sfx.flac".into(), audio_data.clone());
+    // dbg!(":?",cache.get(&"sfx.flac".into()));
+
+    // let audio_data = cache.add("id".into(), audio_data);
+    // dbg!(&audio_data);
+    // crate::core::cpal::test(audio_data);
 }
