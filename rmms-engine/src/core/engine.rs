@@ -25,7 +25,34 @@ struct MidiOutputDevice {
 struct MidiInputDevice;
 
 
-trait AudioInputDevice {}
+
+/// When recording audio, a ring buffer is needed to "store" the input audio.
+/// The audio data from the ring buffer is asynchronously streamed to a file.
+/// Since the file is a raw PCM, it can be easily recovered. (It will take up more space though, need feedback)
+/// 
+/// 
+/// If I am recording 16-bit mono audio at a sample rate of 44100 Hz, 
+/// the minimun disk write speed (KB/s) can be calculated with the following equation:
+/// 
+/// ( SAMPLE_RATE * BYTES_PER_SAMPLE * CHANNELS ) / 1000     (or 1024 if we want KiB/s)
+/// 
+/// (44100 * 2 * 1) / 1000 = 88.2 KB/s 
+/// 
+/// It's not that much! :P 
+/// 
+/// But when picking a ring buffer size, 
+/// add extra breathing room because io-bound operations can be unpredictable. 
+/// Say an extra 64 ms of audio?
+/// 
+/// 64 ms = (64 / 1000) * 44100 = 2822.4 -> 2823 extra frames
+/// 
+/// A "frame" is a unit of representing a group of N channel samples. 
+/// 
+/// If I am recording 16 bit 2 channel audio, a sample frame would be ``[i16, i16]``
+/// 
+/// 
+pub trait AudioInputDevice {}
+
 pub trait AudioOutputDevice {}
 
 struct Dummy;
