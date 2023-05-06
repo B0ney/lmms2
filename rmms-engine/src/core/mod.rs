@@ -1,13 +1,14 @@
 // const CHANNELS
 
+pub mod adsr;
 pub mod cpal;
 pub mod decoder;
-pub mod engine;
-pub mod playback;
 pub mod dsp;
-pub mod adsr;
-pub mod note;
+pub mod engine;
 pub mod midi;
+pub mod note;
+pub mod playback;
+pub mod sample;
 
 use std::{
     collections::HashMap,
@@ -31,10 +32,12 @@ impl SampleCache {
     }
 
     #[must_use = "Cache will be immediately invalidated as this is the only owning reference."]
-    pub fn add(&self, id: String, sample: SampleBuffer) -> Arc<SampleBuffer> {
-        let sample = Arc::new(sample);
+    pub fn add(&self, id: impl Into<String>, sample: impl Into<Arc<SampleBuffer>>) -> Arc<SampleBuffer> {
+        let sample = sample.into();
 
-        self.cache.write().insert(id, Arc::downgrade(&sample));
+        self.cache
+            .write()
+            .insert(id.into(), Arc::downgrade(&sample));
 
         sample
     }
@@ -44,8 +47,11 @@ pub struct Mixer {}
 
 #[derive(Default, Clone)]
 pub struct SampleBuffer {
+    /// Raw sample data
     pub samples: Vec<Vec<f32>>,
+    /// The file the sample came from
     path: Option<PathBuf>,
+    /// The original sample rate
     sample_rate_original: u32,
     sample_rate_current: u32,
 }
@@ -62,10 +68,6 @@ impl SampleBuffer {
         &self.samples
     }
 
-    pub fn audio_mut(&mut self) {
-        // &self
-    }
-
     pub fn channels(&self) -> usize {
         self.samples.len()
     }
@@ -79,25 +81,17 @@ impl SampleBuffer {
     }
 
     pub fn iter_frames(&self) -> impl Iterator<Item = Box<[f32]>> + '_ {
-        (0..self.frames()).map(|f| {
-            let mut sample_frame = Vec::with_capacity(self.channels());
-
-            for channel in self.audio() {
-                sample_frame.push(channel[f])
-            }
-
-            sample_frame.into_boxed_slice()
-        })
+        FramesIter::new(&self.samples)
     }
 
     pub fn frame(&self, idx: usize) -> Option<Box<[f32]>> {
-        let mut sample_frame = Vec::with_capacity(self.channels());
+        let mut sample_frame = vec![0f32; self.channels()].into_boxed_slice();
 
-        for channel in self.audio() {
-            sample_frame.push(*channel.get(idx)?)
+        for channel in 0..self.channels() {
+            sample_frame[channel] = *self.audio()[channel].get(idx)?;
         }
 
-        Some(sample_frame.into_boxed_slice())
+        Some(sample_frame)
     }
 
     /// what if there's more than 2 channels?
@@ -109,7 +103,7 @@ impl SampleBuffer {
             };
         }
 
-        if self.channels() > 1{
+        if self.channels() > 1 {
             return self;
         }
 
@@ -117,12 +111,13 @@ impl SampleBuffer {
         self.samples.push(dupe);
 
         self
-
     }
 
-    pub fn reverse(&mut self) {
-
+    pub fn make_mut<'a>(self: &'a mut Arc<Self>) -> &'a mut Self {
+        Arc::make_mut(self)
     }
+
+    pub fn reverse(&mut self) {}
 }
 
 impl Debug for SampleBuffer {
@@ -130,7 +125,10 @@ impl Debug for SampleBuffer {
         f.debug_struct("SampleBuffer")
             .field("channels", &self.channels())
             .field("frames", &self.frames())
-            .field("duration (secs)", &(self.frames() as f32 / self.sample_rate_original as f32))
+            .field(
+                "duration (secs)",
+                &(self.frames() as f32 / self.sample_rate_original as f32),
+            )
             .field("sample_rate_original", &self.sample_rate_original)
             .field("sample_rate_current", &self.sample_rate_current)
             .field("path", &self.path)
@@ -138,8 +136,50 @@ impl Debug for SampleBuffer {
     }
 }
 
-pub struct Sample {
-    buffer: Arc<SampleBuffer>,
+struct FramesIter<'a> {
+    samples: &'a [Vec<f32>],
+    channels: usize,
+    frame: usize,
+    buffer: Box<[f32]>
+}
+
+impl<'a> FramesIter<'a> {
+    pub fn new(samples: &'a [Vec<f32>]) -> Self {
+        assert!(!samples.is_empty(), "must have at least 1 channel");
+        Self {
+            samples,
+            channels: samples.len(),
+            frame: 0,
+            buffer: vec![0f32; samples.len()].into_boxed_slice()
+        }
+    }
+
+    pub fn override_channels(self, new_channels: usize) -> Self {
+        Self {
+            channels: std::cmp::min(new_channels, self.channels),
+            ..self
+        }
+    }
+}
+
+impl<'a> Iterator for FramesIter<'a> {
+    type Item = Box<[f32]>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.frame >= self.samples[0].len() {
+            return None;
+        }
+
+        let sample_frame = &mut self.buffer;
+
+        for channel in 0..self.channels {
+            sample_frame[channel] = self.samples[channel][self.frame]
+        }
+
+        self.frame += 1;
+
+        Some(sample_frame.clone())
+    }
 }
 
 // #[derive(Clone)]
@@ -148,9 +188,6 @@ pub struct Sample {
 //     Stereo([f32; 2]),
 //     Multi(Box<[f32]>),
 // }
-
-
-
 
 // impl Default for AudioFrame {
 //     fn default() -> Self {
@@ -186,7 +223,7 @@ pub struct Sample {
 //         }
 //     }
 
-//     pub fn from_slice(buf: &[f32]) -> Self {
+//     pub fn from_slice(buf: &mut Box<[f32]>) -> Self {
 //         assert!(!buf.is_empty(), "slice cannot be empty");
 
 //         match buf.len() {
@@ -200,12 +237,10 @@ pub struct Sample {
 //                 dest.copy_from_slice(&buf[..2]);
 //                 Self::Stereo(dest)
 //             }
-//             _ => Self::Multi(buf.to_vec().into_boxed_slice()),
+//             _ => Self::Multi(buf.clone()),
 //         }
 //     }
 // }
-
-
 #[test]
 fn a() {
     let mut sample = SampleBuffer::default();
