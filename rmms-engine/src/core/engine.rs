@@ -6,7 +6,7 @@ const DEFAULT_RATE: usize = 44100;
 const DEFAULT_CHANNELS: usize = 2;
 
 /// The sample frame used by the engine (produced by the mixer)
-type SampleFrame = [f32; DEFAULT_CHANNELS];
+pub type SampleFrame = [f32; DEFAULT_CHANNELS];
 
 /// Ring buffer size in frames. 
 /// The latency (in ms) can be calculated with the following equation:
@@ -88,12 +88,20 @@ pub struct Engine {
     /// The output device is where audio data is streamed to.
     /// Can be changed at runtime
     output_device: Box<dyn AudioOutputDevice>,
-
+    
     /// Input device to recieve audio streams 
     input_device: Arc<dyn AudioInputDevice>,
+
+    /// Frames written to the output device must have a matching sample rate
+    /// The resampler can help
+    resampler: Option<Resampler>,
+
+    
     
     rb_consumber: rb::Consumer<Event>,
 
     sample_cache: SampleCache,
     mixer: Mixer,
 }
+
+struct Resampler;
