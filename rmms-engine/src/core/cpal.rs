@@ -1,98 +1,95 @@
-use std::f32::consts::E;
 use std::sync::Arc;
 
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::Sample;
+use rb::{RbConsumer, RbProducer, RB};
 
 use crate::core::SampleBuffer;
 use std::sync::mpsc::{self, Sender};
 
+use super::engine::SampleFrame;
+
 enum Event {
     CurrentFrame(usize),
-    Finished
+    Finished,
 }
 
-pub fn test(sample: Arc<SampleBuffer>) {
-    let host = cpal::default_host();
-
-    let device = host
-        .default_output_device()
-        .expect("failed to find output device");
-
-    println!("Output device: {}", device.name().unwrap());
-
-    let config = device.default_output_config().unwrap();
-    println!("Default output config: {:?}", config);
-
-    let config = device.default_output_config().unwrap();
-    println!("Default output config: {:?}", config);
-
-    run(&device, &config.into(), sample);
+/// The audio engine must stream audio to 
+/// 
+pub struct CpalOutputDevice {
+    _device: cpal::Device,
+    _stream: cpal::Stream,
+    /// sample rate of the output device.
+    sample_rate: usize,
+    buffer: rb::Producer<f32>,
 }
 
-fn run(device: &cpal::Device, config: &cpal::StreamConfig, sample: Arc<SampleBuffer>) {
-    let sample_rate = config.sample_rate.0 as f32;
-    let channels = config.channels as usize;
+impl CpalOutputDevice {
+    pub fn init() -> Self {
+        let host = cpal::default_host();
 
-    // let frame = Arc::new(sample);
-    let mut frame: usize = 0;
+        let _device: cpal::Device = host
+            .default_output_device()
+            .expect("failed to find output device");
 
-    let mut next_value = move || {
-        let samples = sample.frame(frame);
-        frame += 1;
-        samples
-    };
+        let config = _device.default_output_config().unwrap();
 
-    let (tx, rx) = mpsc::channel::<Event>();
+        let buf_ms: usize = 128;
+        let channels = 2;
+        let sample_rate = config.sample_rate().0 as usize;
+        let buffer_size = ((sample_rate * channels) as f32 * (buf_ms as f32 / 1000.0)) as usize;
+        
+        dbg!(buffer_size);
 
-    let stream = device
-        .build_output_stream(
-            config,
-            move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
-                write_data(data, channels, &mut next_value, tx.clone() )
-            },
-            |_| {},
-            None,
-        )
-        .unwrap();
+        let rb = rb::SpscRb::<f32>::new(buffer_size);
+        let (tx, rx) = (rb.producer(), rb.consumer());
 
+        let write_silence = |data: &mut [f32]| data.iter_mut().for_each(|f| *f = 0.0);
 
-    stream.play().unwrap();
-    
-    loop {
-        match rx.recv() {
-            Ok(event) => match event {
-                Event::CurrentFrame(frame) => {
-                    // dbg!("Decoded frame: {}", frame);
+        let _stream: cpal::Stream = _device
+            .build_output_stream(
+                &config.into(),
+                // todo: use read_blocking instead?
+                move |data: &mut [f32], _: &cpal::OutputCallbackInfo| match rx.read(data) {
+                    // Some(_) => {},
+                    // None => {},
+                    Ok(written) => {
+                        if written != data.len() {
+                            // fill remaining buffer with silence
+                            write_silence(&mut data[written..]);
+                        }
+                    }
+
+                    // Write silence if buffer is empty
+                    Err(_) => write_silence(data),
                 },
-                Event::Finished => {
-                    println!("Done!");
-                    break;
-                },
-            }
-            Err(_) => break,
+                |e| println!("{e}"),
+                None,
+            )
+            .unwrap();
+
+        // start the stream    
+        _stream.play().unwrap();
+
+        Self {
+            _device,
+            _stream,
+            buffer: tx,
+            sample_rate,
         }
     }
-}
 
-fn write_data(
-    output: &mut [f32],
-    channels: usize,
-    next_sample: &mut dyn FnMut() -> Option<Box<[f32]>>,
-    sender: Sender<Event>,
-) {
-    for channel_out in output.chunks_mut(channels) {
-        let value = next_sample().unwrap_or_default();
-
-        for (frame, sample) in channel_out.iter_mut().enumerate() {
-            let Some(idx)  = value.get(frame) else {
-                let _  = sender.send(Event::Finished);
-                return;
-            };
-
-            sender.send(Event::CurrentFrame(frame));
-
-            *sample = *idx;
-        }
+    pub fn write(&self, frame: SampleFrame) {
+        self.write_batch(&[frame]);
     }
+
+    pub fn write_batch(&self, frames: &[SampleFrame]) {
+        // write_blocking is necessaray to ensure ALL samples are written
+        let _ = self.buffer.write_blocking(bytemuck::cast_slice(&frames));
+    }
+
+    pub fn output_rate(&self) -> usize {
+        self.sample_rate
+    }
+
 }
