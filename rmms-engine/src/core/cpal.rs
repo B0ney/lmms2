@@ -83,9 +83,9 @@ impl CpalOutputDevice {
         self.write_batch(&[frame]);
     }
 
-    pub fn write_batch(&self, frames: &[SampleFrame]) {
+    pub fn write_batch(&self, frames: impl AsRef<[SampleFrame]>) {
         // write_blocking is necessaray to ensure ALL samples are written
-        let _ = self.buffer.write_blocking(bytemuck::cast_slice(&frames));
+        let _ = self.buffer.write_blocking(bytemuck::cast_slice(&frames.as_ref()));
     }
 
     pub fn output_rate(&self) -> usize {

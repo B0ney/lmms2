@@ -1,7 +1,8 @@
 use std::sync::Arc;
 
 use crate::core::adsr::ADSR;
-use crate::core::dsp;
+use crate::core::sample::Sample;
+use crate::core::{dsp, };
 use crate::core::engine::AudioInputDevice;
 use crate::core::{SampleBuffer, SampleCache};
 
@@ -12,10 +13,7 @@ use crate::core::{SampleBuffer, SampleCache};
 /// "AudioSuperSampler"...
 #[derive(Default)]
 pub struct AudioFileProcessor2 {
-    /// Arc can provide ``clone-on-write`` with ``make_mut``.
-    ///
-    /// Do note that the modified sample needs to be cached
-    pub sample: Option<Arc<SampleBuffer>>,
+    pub sample: Option<Sample>,
     /// can record audio.
     pub input_device: Option<Arc<dyn AudioInputDevice>>,
 
@@ -26,8 +24,6 @@ pub struct AudioFileProcessor2 {
     pub panning: f32,
     pub pitch: f32,
     pub volume: f32,
-
-    
 }
 
 impl AudioFileProcessor2 {
@@ -43,7 +39,7 @@ impl AudioFileProcessor2 {
 
     fn sample_mut(&mut self) -> Option<&mut SampleBuffer> {
         match &mut self.sample {
-            Some(sample) => Some(Arc::make_mut(sample)),
+            Some(sample) => Some(sample.sample_mut()),
             None => None,
         }
     }

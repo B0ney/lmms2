@@ -140,7 +140,9 @@ struct FramesIter<'a> {
     samples: &'a [Vec<f32>],
     channels: usize,
     frame: usize,
-    buffer: Box<[f32]>
+    buffer: Box<[f32]>,
+    reversed: bool,
+    
 }
 
 impl<'a> FramesIter<'a> {
@@ -150,8 +152,20 @@ impl<'a> FramesIter<'a> {
             samples,
             channels: samples.len(),
             frame: 0,
-            buffer: vec![0f32; samples.len()].into_boxed_slice()
+            buffer: vec![0f32; samples.len()].into_boxed_slice(),
+            reversed: false
         }
+    }
+
+    pub fn reverse(mut self) -> Self {
+        self.reversed = !self.reversed;
+
+        self.frame = match self.reversed {
+            true => self.samples[0].len() - 1,
+            false => 0,
+        };
+        
+        self
     }
 
     pub fn override_channels(self, new_channels: usize) -> Self {
@@ -166,6 +180,10 @@ impl<'a> Iterator for FramesIter<'a> {
     type Item = Box<[f32]>;
 
     fn next(&mut self) -> Option<Self::Item> {
+        if self.frame == 0 && self.reversed {
+            return None;
+        }
+
         if self.frame >= self.samples[0].len() {
             return None;
         }
@@ -176,7 +194,10 @@ impl<'a> Iterator for FramesIter<'a> {
             sample_frame[channel] = self.samples[channel][self.frame]
         }
 
-        self.frame += 1;
+        match self.reversed {
+            true => self.frame -= 1,
+            false => self.frame += 1,
+        }
 
         Some(sample_frame.clone())
     }
