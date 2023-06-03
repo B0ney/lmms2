@@ -1,8 +1,11 @@
 use std::fs::File;
 // use std::io::{BufReader, Cursor};
 use std::path::Path;
+use std::sync::Arc;
 
+use crate::core::cpal::CpalOutputDevice;
 use crate::core::SampleBuffer as RmmsSampleBuffer;
+use crate::core::engine::SampleFrameModifier;
 
 use symphonia::core::audio::{
     AudioBuffer, AudioBufferRef, AudioPlanes, Channels, RawSampleBuffer, SampleBuffer, Signal,
@@ -15,8 +18,6 @@ use symphonia::core::io::{MediaSource, MediaSourceStream, MediaSourceStreamOptio
 use symphonia::core::meta::MetadataOptions;
 use symphonia::core::probe::{Hint, Probe};
 use symphonia::core::units::Duration;
-
-use super::SampleCache;
 
 /// Supported formats:
 ///
@@ -180,49 +181,14 @@ fn output_to_wav(audio_data: &RmmsSampleBuffer, file: impl AsRef<Path>) {
     let mut writer = hound::WavWriter::create(file, spec).unwrap();
 
     for sample_frame in audio_data.iter_frames() {
-        for sample in sample_frame.iter() {
+        for sample in sample_frame.as_ref() {
             writer.write_sample(*sample).unwrap()
         }
     }
 }
 
-
-
+/// cargo test --release --package rmms-engine --lib -- core::decoder::h --exact --nocapture
 #[test]
 fn h() {
-    // let mut audio_data = SymphoniaDecoder::load_from_file("../audio/cobalt-16-mono.ogg").to_stereo();
 
-    // let sfx_no_reverb = SymphoniaDecoder::load_from_file("../audio/sfx_noreverb.wav");
-    // let impulse_response = SymphoniaDecoder::load_from_file("../audio/reverb ir 3.flac");
-    
-    // dbg!(&sfx_no_reverb);
-    // dbg!(&impulse_response);
-
-    // let processed = crate::core::dsp::convolve(
-    //     &sfx_no_reverb,
-    //     &impulse_response,
-    // );
-    // output_to_wav(&processed, "./reverb.wav");
-
-    // let a = SymphoniaDecoder::load_from_file("../audio/bgsdgfg-04.ogg");
-
-    // let mut a_inverted = a.clone();
-    // crate::core::dsp::reverse(&mut a_inverted);
-    
-
-    // // crate::core::dsp::reverse(&mut audio_data);
-    // let c = crate::core::dsp::mix(
-    //     &a,&a_inverted
-    // );
-    // output_to_wav(&c, "./mixed.wav");
-    // dbg!("saving buffer to file...");
-    
-    // panic!();
-    // let cache = SampleCache::default();
-    // cache.add("sfx.flac".into(), audio_data.clone());
-    // dbg!(":?",cache.get(&"sfx.flac".into()));
-
-    // let audio_data = cache.add("id".into(), audio_data);
-    // dbg!(&audio_data);
-    // crate::core::cpal::test(audio_data);
 }

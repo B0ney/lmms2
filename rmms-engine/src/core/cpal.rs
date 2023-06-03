@@ -34,8 +34,8 @@ impl CpalOutputDevice {
 
         let config = _device.default_output_config().unwrap();
 
-        let buf_ms: usize = 128;
-        let channels = 2;
+        let buf_ms: usize = 64;
+        let channels = config.channels() as usize;
         let sample_rate = config.sample_rate().0 as usize;
         let buffer_size = ((sample_rate * channels) as f32 * (buf_ms as f32 / 1000.0)) as usize;
         
@@ -50,18 +50,24 @@ impl CpalOutputDevice {
             .build_output_stream(
                 &config.into(),
                 // todo: use read_blocking instead?
-                move |data: &mut [f32], _: &cpal::OutputCallbackInfo| match rx.read(data) {
+                move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
+                    for frame in data.chunks_mut(channels) {
+
+                        match rx.read(frame) {
                     // Some(_) => {},
                     // None => {},
                     Ok(written) => {
-                        if written != data.len() {
-                            // fill remaining buffer with silence
-                            write_silence(&mut data[written..]);
-                        }
+                        // if written != frame.len() {
+                        //     // fill remaining buffer with silence
+                        //     write_silence(&mut frame[written..]);
+                        // }
                     }
 
                     // Write silence if buffer is empty
-                    Err(_) => write_silence(data),
+                    Err(_) => (),
+                    //  write_silence(frame),
+                    }
+                }
                 },
                 |e| println!("{e}"),
                 None,

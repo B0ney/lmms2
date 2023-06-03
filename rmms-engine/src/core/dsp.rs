@@ -1,3 +1,5 @@
+use rubato::{FftFixedInOut, Resampler};
+
 use super::SampleBuffer;
 
 pub fn reverse(sample: &mut SampleBuffer) {
@@ -73,6 +75,62 @@ pub fn mix(
 
 fn _fft_convolve() {}
 
+
+
+pub fn write_frames(audio: Vec<Vec<f32>>, buffer: &mut Vec<Vec<f32>>, channels: usize) {
+    let total_frames = audio[0].len();
+
+    for frame in 0..total_frames {
+        for channel in 0..channels {
+            let sample = audio[channel][frame];
+            buffer[channel].push(sample);
+        }
+    }
+
+}
+
+fn read_frames(audio: &[Vec<f32>], chunk_size: usize, channels: usize, frame_offset: usize) -> Vec<Vec<f32>> {
+    let mut out = vec![Vec::new(); channels];
+
+    for channel in 0..channels {
+        for frame in 0..chunk_size {
+            let sample = audio[channel][frame];
+            out[channel].push(sample)
+        }
+    }
+
+    out
+}
+
+pub fn resample(sample: &SampleBuffer, target: usize) -> SampleBuffer {
+    let channels  = sample.channels();
+    let mut resampler = FftFixedInOut::<f32>::new(
+        sample.sample_rate_original as usize,
+        target,
+        sample.frames(),
+       channels
+    ).unwrap();
+
+
+
+    let chunk_size = resampler.input_frames_next();
+    dbg!(chunk_size);
+    dbg!(sample.frames());
+
+    // let wave_out
+    let mut buffer = vec![Vec::new(); channels];
+
+    for frame in 0..(sample.frames()/ chunk_size) {
+        // let frames = resampler.input_frames_next();
+        let waves = read_frames(sample.audio(), chunk_size, channels, frame);
+        let wave_out = resampler.process(&waves, None).unwrap();
+        
+        write_frames(wave_out, &mut buffer, channels);
+    }
+
+    SampleBuffer::new(buffer, target as u32)
+
+}
 
 mod resampler {
 
