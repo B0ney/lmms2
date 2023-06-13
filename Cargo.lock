@@ -1554,7 +1554,9 @@ dependencies = [
  "lazy_static",
  "symphonia-bundle-flac",
  "symphonia-bundle-mp3",
+ "symphonia-codec-aac",
  "symphonia-codec-adpcm",
+ "symphonia-codec-pcm",
  "symphonia-codec-vorbis",
  "symphonia-core",
  "symphonia-format-ogg",
@@ -1587,7 +1589,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "symphonia-codec-aac"
+version = "0.5.2"
+source = "git+https://github.com/pdeljanov/Symphonia.git#abb3aabafbe4455db54cdef7528871fd60fc60b5"
+dependencies = [
+ "lazy_static",
+ "log",
+ "symphonia-core",
+]
+
+[[package]]
 name = "symphonia-codec-adpcm"
+version = "0.5.2"
+source = "git+https://github.com/pdeljanov/Symphonia.git#abb3aabafbe4455db54cdef7528871fd60fc60b5"
+dependencies = [
+ "log",
+ "symphonia-core",
+]
+
+[[package]]
+name = "symphonia-codec-pcm"
 version = "0.5.2"
 source = "git+https://github.com/pdeljanov/Symphonia.git#abb3aabafbe4455db54cdef7528871fd60fc60b5"
 dependencies = [

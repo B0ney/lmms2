@@ -1,7 +1,8 @@
 use std::sync::Arc;
 
-use super::{engine::SampleFrame, SampleBuffer, SampleCache};
+use super::{engine::Frame, SampleBuffer, SampleCache, traits::PlayHandle};
 
+#[derive(Clone)]
 pub struct Sample {
     /// Arc can provide ``clone-on-write`` with ``make_mut``.
     ///
@@ -32,7 +33,7 @@ impl Sample {
         self.end - self.start
     }
 
-    fn play(&mut self, out_buffer: &mut [SampleFrame], frames: usize) {
+    fn play(&mut self, out_buffer: &mut [Frame], frames: usize) {
         let offset = self.start + self.current_frame;
         let frames_left = frames.saturating_sub(self.current_frame);
 
@@ -72,5 +73,32 @@ impl Sample {
             buffer: cache.get(key)?,
             ..todo!()
         })
+    }
+}
+
+impl PlayHandle for Sample {
+    fn next(&mut self) -> Option<[f32; 2]> {
+        let offset = self.start + self.current_frame;
+        // let frames_left = frames.saturating_sub(self.current_frame);
+
+        // let end = std::cmp::min(self.buffer.frames(), offset + frames_left);
+
+        if offset >= self.buffer.frames() {
+            return None;
+        };
+
+        let result = self.buffer.frame(offset).map(|f| [f[0], f[1]]);
+        self.current_frame += 1;
+
+        result
+
+    }
+
+    fn reset(&mut self) {
+        todo!()
+    }
+
+    fn jump(&mut self, tick: usize) {
+        todo!()
     }
 }

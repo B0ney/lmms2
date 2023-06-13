@@ -7,7 +7,8 @@ use rb::{RbConsumer, RbProducer, RB};
 use crate::core::SampleBuffer;
 use std::sync::mpsc::{self, Sender};
 
-use super::engine::SampleFrame;
+use super::engine::{Frame, EngineHandle};
+use super::traits::AudioOutputDevice;
 
 enum Event {
     CurrentFrame(usize),
@@ -22,15 +23,16 @@ pub struct CpalOutputDevice {
     /// sample rate of the output device.
     sample_rate: usize,
     buffer: rb::Producer<f32>,
+    handle: EngineHandle,
 }
 
 impl CpalOutputDevice {
-    pub fn init() -> Self {
+    pub fn start(handle: super::engine::EngineHandle) -> Option<Self> {
         let host = cpal::default_host();
 
         let _device: cpal::Device = host
-            .default_output_device()
-            .expect("failed to find output device");
+            .default_output_device()?;
+            // .expect("failed to find output device");
 
         let config = _device.default_output_config().unwrap();
 
@@ -77,19 +79,20 @@ impl CpalOutputDevice {
         // start the stream    
         _stream.play().unwrap();
 
-        Self {
+        Some(Self {
             _device,
             _stream,
             buffer: tx,
             sample_rate,
-        }
+            handle,
+        })
     }
 
-    pub fn write(&self, frame: SampleFrame) {
+    pub fn write(&self, frame: Frame) {
         self.write_batch(&[frame]);
     }
 
-    pub fn write_batch(&self, frames: impl AsRef<[SampleFrame]>) {
+    pub fn write_batch(&self, frames: impl AsRef<[Frame]>) {
         // write_blocking is necessaray to ensure ALL samples are written
         let _ = self.buffer.write_blocking(bytemuck::cast_slice(&frames.as_ref()));
     }
@@ -98,4 +101,24 @@ impl CpalOutputDevice {
         self.sample_rate
     }
 
+}
+
+impl AudioOutputDevice for CpalOutputDevice {
+    fn init(handle: super::engine::EngineHandle) -> Option<Box<Self>> {
+        Self::start(handle).map(Box::new)
+    }
+
+    fn rate(&self) -> u32 {
+        self.sample_rate as u32
+    }
+
+    fn reset(&mut self) {
+        if let Some(device) = Self::start(self.handle.to_owned()) {
+            *self = device
+        }
+    }
+
+    fn write(&mut self, chunk: &[[f32; 2]]) {
+        self.write_batch(chunk)
+    }
 }

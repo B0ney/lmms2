@@ -1,41 +1,20 @@
-use std::{collections::HashSet, sync::Arc};
+use std::{
+    collections::HashSet,
+    sync::{mpsc, Arc},
+};
 
-use super::SampleCache;
+use crate::core::cpal::CpalOutputDevice;
+
+use super::{
+    traits::{AudioInputDevice, AudioOutputDevice, PlayHandle, FrameModifier},
+    SampleCache, event::Event,
+};
 
 const DEFAULT_RATE: usize = 44100;
 const DEFAULT_CHANNELS: usize = 2;
 
 /// The sample frame used by the engine (produced by the mixer)
-pub type SampleFrame = [f32; DEFAULT_CHANNELS];
-
-pub trait SampleFrameModifier {
-    fn force_channel(self, channel: usize) -> Self;
-    fn swap_channels(self) -> Self;
-    fn amplify(self, scale: f32) -> Self;
-}
-
-impl SampleFrameModifier for [f32; DEFAULT_CHANNELS] {
-    fn force_channel(mut self, channel: usize) -> Self {
-        let sample = self[channel];
-        self.fill(sample);
-        self
-    }
-
-    fn swap_channels(mut self) -> Self {
-        self.reverse();
-        self
-    }
-
-    fn amplify(mut self, scale: f32) -> Self {
-        self.iter_mut()
-            .for_each(|sample| {
-                *sample = (*sample * scale).clamp(-1.0, 1.0)
-            });
-        self
-    }
-}
-
-
+pub type Frame = [f32; DEFAULT_CHANNELS];
 
 /// Ring buffer size in frames.
 /// The latency (in ms) can be calculated with the following equation:
@@ -43,7 +22,6 @@ impl SampleFrameModifier for [f32; DEFAULT_CHANNELS] {
 /// (BUFFER_SIZE / SAMPLE_RATE) * 1000
 const DEFAULT_BUFFER_SIZE: usize = 2048;
 
-pub enum Event {}
 
 struct MidiOutputDevice {}
 
@@ -74,17 +52,39 @@ struct MidiInputDevice;
 /// If I am recording 16 bit 2 channel audio, a sample frame would be ``[i16, i16]``
 ///
 ///
-pub trait AudioInputDevice {}
-
-pub trait AudioOutputDevice {}
 
 struct Dummy;
 
 impl AudioInputDevice for Dummy {}
-impl AudioOutputDevice for Dummy {}
+impl AudioOutputDevice for Dummy {
+    fn init(handle: EngineHandle) -> Option<Box<Self>>
+    {
+        Some(Box::new(Self))
+    }
+
+    fn rate(&self) -> u32 {
+        DEFAULT_RATE as u32
+    }
+
+    fn reset(&mut self) {}
+
+    fn write(&mut self, chunk: &[[f32; 2]]) {}
+}
 
 pub struct EngineConfiguration {}
 pub struct Mixer;
+
+#[derive(Clone)]
+pub struct EngineHandle {
+    tx: mpsc::Sender<Event>,
+}
+
+impl EngineHandle {
+    pub fn send(&self, event: Event) {
+        self.tx.send(event);
+    }
+}
+
 
 /*
 TODO: inlcude Time somewhere
@@ -99,27 +99,95 @@ TODO: inlcude Time somewhere
 
                             TODO: where do filters/effects fit?
 */
-pub struct Engine {
-    config: EngineConfiguration,
 
-    midi_in: HashSet<Arc<MidiInputDevice>>,
-    midi_out: HashSet<Arc<MidiOutputDevice>>,
+pub struct AudioEngine {
+    // config: EngineConfiguration,
+
+    // midi_in: HashSet<Arc<MidiInputDevice>>,
+    // midi_out: HashSet<Arc<MidiOutputDevice>>,
 
     /// The output device is where audio data is streamed to.
     /// Can be changed at runtime
     output_device: Box<dyn AudioOutputDevice>,
 
     /// Input device to recieve audio streams
-    input_device: Arc<dyn AudioInputDevice>,
+    // input_device: Arc<dyn AudioInputDevice>,
 
     /// Frames written to the output device must have a matching sample rate
     /// The resampler can help
-    resampler: Option<Resampler>,
+    // resampler: Option<Resampler>,
 
-    rb_consumber: rb::Consumer<Event>,
+    // rb_consumber: rb::Consumer<Event>,
 
-    sample_cache: SampleCache,
+    pub sample_cache: SampleCache,
     mixer: Mixer,
+
+    handles: Vec<Box<dyn PlayHandle>>
 }
 
+impl AudioEngine {
+    fn init(handle: EngineHandle) -> Self {
+        let output_device: Box<dyn AudioOutputDevice> = match CpalOutputDevice::init(handle.clone()) {
+            Some(device) => device,
+            None => Dummy::init(handle.clone()).expect("Dummy should be infallible"),
+        };
+
+        Self {
+            output_device,
+            sample_cache: SampleCache::default(),
+            mixer: Mixer,
+            handles: Vec::with_capacity(128),
+        }        
+    }
+
+    pub fn new() -> EngineHandle {
+        let (tx, rx) = std::sync::mpsc::channel::<Event>();
+        let handle = EngineHandle { tx };
+
+        let audio_handle = handle.clone();
+        std::thread::spawn(move || {
+            let mut engine = AudioEngine::init(audio_handle);
+            loop {
+                for event in rx.try_iter().take(32) {
+                    engine.handle_event(event);
+                }
+                engine.tick();
+            }
+        });
+
+        handle
+    }
+
+    pub fn tick(&mut self) {
+        let mut frame: Frame = [0.0, 0.0];
+        let mut index: usize = 0;
+
+        while index < self.handles.len() {
+            let handle = &mut self.handles[index];
+
+            let Some(next_frame) = handle.next() else {
+                self.handles.swap_remove(index);
+                continue;
+            };
+
+            frame[0] += next_frame[0];
+            frame[1] += next_frame[1];
+
+            index += 1;
+        }
+
+        self.output_device.write(&[frame.amplify(0.25).clamp()]);
+    }
+
+    pub fn handle_event(&mut self, event: Event) {
+        match event {
+            Event::RequestAudioDeviceReset => self.output_device.reset(),
+            Event::PushPlayHandle(play_handle) => self.handles.push(play_handle),
+            // Event::PlayEvent(state) => self.state = state,
+            Event::Clear => self.handles.clear(),
+        }
+    }
+
+
+}
 struct Resampler;

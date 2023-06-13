@@ -4,8 +4,8 @@ use std::path::Path;
 use std::sync::Arc;
 
 use crate::core::cpal::CpalOutputDevice;
+use crate::core::traits::FrameModifier;
 use crate::core::SampleBuffer as RmmsSampleBuffer;
-use crate::core::engine::SampleFrameModifier;
 
 use symphonia::core::audio::{
     AudioBuffer, AudioBufferRef, AudioPlanes, Channels, RawSampleBuffer, SampleBuffer, Signal,
@@ -188,7 +188,61 @@ fn output_to_wav(audio_data: &RmmsSampleBuffer, file: impl AsRef<Path>) {
 }
 
 /// cargo test --release --package rmms-engine --lib -- core::decoder::h --exact --nocapture
-#[test]
-fn h() {
+#[cfg(test)]
+mod tests {
+    use std::time::Duration;
 
+    use crate::core::{engine::AudioEngine, event::Event, sample::Sample, SampleCache};
+
+    use super::SymphoniaDecoder;
+
+    #[test]
+    fn h() {
+        let cache = SampleCache::new();
+        let kick = cache.add(
+            "kick",
+            SymphoniaDecoder::load_from_file("../audio/kick.wav"),
+        );
+        let snare = cache.add(
+            "snare",
+            SymphoniaDecoder::load_from_file("../audio/snare.wav"),
+        );
+        let crash = cache.add(
+            "crash",
+            SymphoniaDecoder::load_from_file("../audio/crash_5.wav"),
+        );
+
+        let kick = Sample::new(kick);
+        let snare = Sample::new(snare);
+        let crash = Sample::new(crash);
+
+        let handle = AudioEngine::new();
+
+        let play_kick = || handle.send(Event::play_handle(kick.clone()));
+        let play_snare = || handle.send(Event::play_handle(snare.clone()));
+        let play_crash = || handle.send(Event::play_handle(crash.clone()));
+
+        let sleep_ms = |time: u64| std::thread::sleep(Duration::from_millis(time));
+
+        for _ in 0..5 {
+            for _ in 0..4 {
+                play_kick();
+                sleep_ms(250);
+
+                play_snare();
+                sleep_ms(250);
+
+                play_kick();
+                sleep_ms(128);
+                play_kick();
+                sleep_ms(128);
+
+                play_snare();
+                sleep_ms(250);
+            }
+            play_crash()
+        }
+
+        sleep_ms(500);
+    }
 }

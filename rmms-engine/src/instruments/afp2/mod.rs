@@ -2,8 +2,9 @@ use std::sync::Arc;
 
 use crate::core::adsr::ADSR;
 use crate::core::sample::Sample;
+use crate::core::traits::AudioInputDevice;
 use crate::core::{dsp, };
-use crate::core::engine::AudioInputDevice;
+// use crate::core::engine::AudioInputDevice;
 use crate::core::{SampleBuffer, SampleCache};
 
 /// I think "SuperAudioFileProcessor" is a cooler name.

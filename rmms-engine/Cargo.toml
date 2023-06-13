@@ -22,7 +22,9 @@ rubato = "0.12.0"
 git = "https://github.com/pdeljanov/Symphonia.git"
 default-features = false
 features = [
+    "pcm",
     "wav",
+    "aac",
     "aiff",
     "flac",
     "ogg",
