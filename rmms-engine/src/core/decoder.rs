@@ -124,7 +124,10 @@ impl SymphoniaDecoder {
 
             errors += 1;
         }
-        RmmsSampleBuffer::new(out_buffer, rate)
+        
+        let mut sample = RmmsSampleBuffer::new(out_buffer, rate);
+        crate::core::dsp::resample(&mut sample, 44100);
+        sample
     }
 
     pub fn init() -> Self {
@@ -187,8 +190,8 @@ fn output_to_wav(audio_data: &RmmsSampleBuffer, file: impl AsRef<Path>) {
     }
 }
 
-/// cargo test --release --package rmms-engine --lib -- core::decoder::h --exact --nocapture
-#[cfg(test)]
+/// cargo test --release --package rmms-engine --lib -- core::decoder::tests --nocapture
+// #[cfg(test)]
 mod tests {
     use std::time::Duration;
 
@@ -211,26 +214,41 @@ mod tests {
             "crash",
             SymphoniaDecoder::load_from_file("../audio/crash_5.wav"),
         );
+        let jungle = cache.add(
+            "jungle",
+            SymphoniaDecoder::load_from_file("../audio/jungle.wav"),
+        );
 
         let kick = Sample::new(kick);
         let snare = Sample::new(snare);
         let crash = Sample::new(crash);
+        let jungle = Sample::new(jungle);
 
         let handle = AudioEngine::new();
 
-        let play_kick = || handle.send(Event::play_handle(kick.clone()));
-        let play_snare = || handle.send(Event::play_handle(snare.clone()));
-        let play_crash = || handle.send(Event::play_handle(crash.clone()));
+        let send = |sample: Sample, msg: &str| {
+            handle.send(Event::play_handle(sample));
+            println!("{msg}"); // Don't use this in time critical events like this
+        };
+
+        let play_kick = || send(kick.clone(), "kick");
+        let play_snare = || send(snare.clone(), "   snare");
+        let play_crash = || send(crash.clone(), "       crash");
+        let play_jungle = || send(jungle.clone(), "jungle");
 
         let sleep_ms = |time: u64| std::thread::sleep(Duration::from_millis(time));
+        let clear_handles = || handle.send(Event::Clear);
 
+        sleep_ms(500);
+
+        println!("drums");
         for _ in 0..5 {
             for _ in 0..4 {
                 play_kick();
-                sleep_ms(250);
+                sleep_ms(256);
 
                 play_snare();
-                sleep_ms(250);
+                sleep_ms(256);
 
                 play_kick();
                 sleep_ms(128);
@@ -238,11 +256,41 @@ mod tests {
                 sleep_ms(128);
 
                 play_snare();
-                sleep_ms(250);
+                sleep_ms(256);
             }
             play_crash()
         }
 
+        println!("playing jungle beat");
         sleep_ms(500);
+
+        play_jungle();
+        sleep_ms(250);
+
+        for _ in 0..2 {
+            clear_handles();
+            play_jungle();
+            sleep_ms(128);
+        }
+
+        for _ in 0..2 {
+            clear_handles();
+            play_jungle();
+            sleep_ms(256);
+        }
+
+        clear_handles();
+        play_jungle();
+        sleep_ms(3500);
+
+        clear_handles();
+        play_jungle();
+        sleep_ms(256);
+
+        for _ in 0..3 {
+            clear_handles();
+            play_jungle();
+            sleep_ms(5580);
+        }
     }
 }

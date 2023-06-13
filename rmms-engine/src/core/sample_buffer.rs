@@ -15,7 +15,7 @@ pub struct Mixer {}
 #[derive(Default, Clone)]
 pub struct SampleBuffer {
     /// Raw sample data
-    pub samples: Vec<Vec<f32>>,
+    pub buf: Vec<Vec<f32>>,
     /// The file the sample came from
     pub path: Option<PathBuf>,
     /// The original sample rate
@@ -26,29 +26,30 @@ pub struct SampleBuffer {
 impl SampleBuffer {
     pub fn new(buffer: Vec<Vec<f32>>, rate: u32) -> Self {
         Self {
-            samples: buffer,
+            buf: buffer,
             sample_rate_original: rate,
+            sample_rate_current: rate,
             ..Default::default()
         }
     }
     pub fn audio(&self) -> &[Vec<f32>] {
-        &self.samples
+        &self.buf
     }
 
     pub fn channels(&self) -> usize {
-        self.samples.len()
+        self.buf.len()
     }
 
     /// assume channel data is the same length
     pub fn frames(&self) -> usize {
-        let Some(buffer) = self.samples.get(0) else {
+        let Some(buffer) = self.buf.get(0) else {
             return 0;
         };
         buffer.len()
     }
 
     pub fn iter_frames(&self) -> impl Iterator<Item = Box<[f32]>> + '_ {
-        FramesIter::new(&self.samples)
+        FramesIter::new(&self.buf)
     }
 
     pub fn frame(&self, idx: usize) -> Option<Box<[f32]>> {
@@ -65,7 +66,7 @@ impl SampleBuffer {
     pub fn to_stereo(mut self) -> Self {
         if self.channels() == 0 {
             return Self {
-                samples: vec![Vec::new(); 2],
+                buf: vec![Vec::new(); 2],
                 ..self
             };
         }
@@ -74,8 +75,8 @@ impl SampleBuffer {
             return self;
         }
 
-        let dupe = self.samples[0].clone();
-        self.samples.push(dupe);
+        let dupe = self.buf[0].clone();
+        self.buf.push(dupe);
 
         self
     }

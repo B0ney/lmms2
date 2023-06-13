@@ -1,15 +1,15 @@
-use rubato::{FftFixedInOut, Resampler};
+use rubato::{FftFixedInOut, Resampler, InterpolationParameters, InterpolationType, WindowFunction};
 
 use super::SampleBuffer;
 
 pub fn reverse(sample: &mut SampleBuffer) {
-    for channel in sample.samples.iter_mut() {
+    for channel in sample.buf.iter_mut() {
         channel.reverse()
     }
 }
 
 pub fn invert(sample: &mut SampleBuffer) {
-    for channel in sample.samples.iter_mut() {
+    for channel in sample.buf.iter_mut() {
         for sample in channel.iter_mut() {
             *sample *= -1.0;
         }
@@ -102,34 +102,30 @@ fn read_frames(audio: &[Vec<f32>], chunk_size: usize, channels: usize, frame_off
     out
 }
 
-pub fn resample(sample: &SampleBuffer, target: usize) -> SampleBuffer {
-    let channels  = sample.channels();
-    let mut resampler = FftFixedInOut::<f32>::new(
-        sample.sample_rate_original as usize,
-        target,
-        sample.frames(),
-       channels
-    ).unwrap();
-
-
-
-    let chunk_size = resampler.input_frames_next();
-    dbg!(chunk_size);
-    dbg!(sample.frames());
-
-    // let wave_out
-    let mut buffer = vec![Vec::new(); channels];
-
-    for frame in 0..(sample.frames()/ chunk_size) {
-        // let frames = resampler.input_frames_next();
-        let waves = read_frames(sample.audio(), chunk_size, channels, frame);
-        let wave_out = resampler.process(&waves, None).unwrap();
-        
-        write_frames(wave_out, &mut buffer, channels);
+pub fn resample(sample: &mut SampleBuffer, target_rate: u32) {
+    if sample.sample_rate_current == target_rate {
+        return;
     }
 
-    SampleBuffer::new(buffer, target as u32)
+    let mut resampler = rubato::SincFixedIn::<f32>::new(
+        target_rate as f64 / sample.sample_rate_current as f64,
+        2.0,
+        InterpolationParameters {
+            sinc_len: 256,
+            f_cutoff: 0.95,
+            interpolation: InterpolationType::Linear,
+            oversampling_factor: 256,
+            window: WindowFunction::BlackmanHarris2,
+        },
+        sample.frames(),
+        sample.channels(),
+    )
+    .unwrap();
 
+    let new_buffer = resampler.process(&sample.buf, None).unwrap();
+
+    sample.buf = new_buffer;
+    sample.sample_rate_current = target_rate;
 }
 
 mod resampler {
