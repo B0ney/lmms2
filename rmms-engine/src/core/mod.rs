@@ -10,6 +10,7 @@ pub mod sample_buffer;
 pub mod traits;
 pub mod cache;
 pub mod event;
+pub mod handles;
 
 pub use sample_buffer::SampleBuffer;
 pub type SampleCache = cache::Cache<String, SampleBuffer>;

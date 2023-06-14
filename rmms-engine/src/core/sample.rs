@@ -87,7 +87,7 @@ impl PlayHandle for Sample {
             return None;
         };
 
-        let result = self.buffer.frame(offset).map(|f| [f[0], f[1]]);
+        let result = self.buffer.frame(offset).map(|f| [f[0], *f.get(1).unwrap_or(&f[0])]);
         self.current_frame += 1;
 
         result

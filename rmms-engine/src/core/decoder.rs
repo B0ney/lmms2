@@ -195,7 +195,7 @@ fn output_to_wav(audio_data: &RmmsSampleBuffer, file: impl AsRef<Path>) {
 mod tests {
     use std::time::Duration;
 
-    use crate::core::{engine::AudioEngine, event::Event, sample::Sample, SampleCache};
+    use crate::core::{engine::{AudioEngine, EngineHandle}, event::Event, sample::Sample, SampleCache, handles::resampler::Panner, traits::PlayHandle};
 
     use super::SymphoniaDecoder;
 
@@ -219,10 +219,49 @@ mod tests {
             SymphoniaDecoder::load_from_file("../audio/jungle.wav"),
         );
 
+
+        let cowbell = cache.add(
+            "cowbell",
+            SymphoniaDecoder::load_from_file("../audio/linndrum/cowb.wav"),
+        );
+        let clap = cache.add(
+            "clap",
+            SymphoniaDecoder::load_from_file("../audio/linndrum/clap.wav"),
+        );
+        let hat = cache.add(
+            "hat",
+            SymphoniaDecoder::load_from_file("../audio/linndrum/chhs.wav"),
+        );
+        let snare_linn = cache.add(
+            "snare_linn",
+            SymphoniaDecoder::load_from_file("../audio/linndrum/sd.wav"),
+        );
+        let bass_drum = cache.add(
+            "kick",
+            SymphoniaDecoder::load_from_file("../audio/linndrum/kick.wav"),
+        );
+
+
+
+
         let kick = Sample::new(kick);
         let snare = Sample::new(snare);
         let crash = Sample::new(crash);
         let jungle = Sample::new(jungle);
+
+        let cowbell = Sample::new(cowbell);
+        let clap = Sample::new(clap);
+        let hat = Sample::new(hat);
+        let snare_linn = Sample::new(snare_linn);
+        let bass_drum = Sample::new(bass_drum);
+
+
+
+
+
+
+
+        let jungle_l = Panner::new(jungle.clone(),-0.0);
 
         let handle = AudioEngine::new();
 
@@ -235,62 +274,367 @@ mod tests {
         let play_snare = || send(snare.clone(), "   snare");
         let play_crash = || send(crash.clone(), "       crash");
         let play_jungle = || send(jungle.clone(), "jungle");
+        let play_jungle = || handle.send(Event::play_handle(jungle_l.clone()));
 
         let sleep_ms = |time: u64| std::thread::sleep(Duration::from_millis(time));
         let clear_handles = || handle.send(Event::Clear);
 
         sleep_ms(500);
 
-        println!("drums");
-        for _ in 0..5 {
-            for _ in 0..4 {
-                play_kick();
-                sleep_ms(256);
+        // println!("drums");
+        // for _ in 0..5 {
+        //     for _ in 0..4 {
+        //         play_kick();
+        //         sleep_ms(256);
 
-                play_snare();
-                sleep_ms(256);
+        //         play_snare();
+        //         sleep_ms(256);
 
-                play_kick();
-                sleep_ms(128);
-                play_kick();
-                sleep_ms(128);
+        //         play_kick();
+        //         sleep_ms(128);
+        //         play_kick();
+        //         sleep_ms(128);
 
-                play_snare();
-                sleep_ms(256);
+        //         play_snare();
+        //         sleep_ms(256);
+        //     }
+        //     play_crash()
+        // }
+
+        // println!("playing jungle beat");
+        // sleep_ms(500);
+
+        // play_jungle();
+        // sleep_ms(250);
+
+        // for _ in 0..2 {
+        //     clear_handles();
+        //     play_jungle();
+        //     sleep_ms(128);
+        // }
+
+        // for _ in 0..2 {
+        //     clear_handles();
+        //     play_jungle();
+        //     sleep_ms(256);
+        // }
+
+        // clear_handles();
+        // play_jungle();
+        // sleep_ms(3500);
+
+        // clear_handles();
+        // play_jungle();
+        // sleep_ms(256);
+
+        // for _ in 0..3 {
+        //     clear_handles();
+        //     play_jungle();
+        //     sleep_ms(5580);
+        // }
+
+
+
+        let pattern = || Pattern::new()
+            .push(
+                PatternFrame::new()
+                    .push(cowbell.clone())
+                    .push(clap.clone())
+                    // .push(hat.clone())
+                    // .push(snare_linn.clone())
+                    .push(bass_drum.clone())
+            )
+            .push_empty()
+            // 3
+            .push(
+                PatternFrame::new()
+                    .push(cowbell.clone())
+                    .push(clap.clone())
+                    .push(hat.clone())
+            )
+            .push(
+                PatternFrame::new()
+                    .push(hat.clone())
+            )
+            .push(
+                PatternFrame::new()
+                    .push(cowbell.clone())
+                    .push(snare_linn.clone())
+                    .push(bass_drum.clone())
+            )
+            .push_empty()
+            // 7
+            .push(
+                PatternFrame::new()
+                    .push(cowbell.clone())
+                    .push(clap.clone())
+                    .push(hat.clone())
+            )
+            .push(
+                PatternFrame::new()
+                    .push(cowbell.clone())
+                    .push(hat.clone())
+            )
+            .push(
+                PatternFrame::new()
+                    .push(clap.clone())
+                    .push(bass_drum.clone())
+            )
+            .push(
+                PatternFrame::new()
+                    .push(cowbell.clone())
+                    .push(clap.clone())
+            )
+            // 11
+            .push(
+                PatternFrame::new()
+                    .push(cowbell.clone())
+                    .push(hat.clone())
+            )
+            .push(
+                PatternFrame::new()
+                    .push(cowbell.clone())
+                    .push(clap.clone())
+                    .push(hat.clone())
+            )
+            // 13
+            .push(
+                PatternFrame::new()
+                    .push(cowbell.clone())
+                    .push(clap.clone())
+                    // .push(hat.clone())
+                    .push(snare_linn.clone())
+                    // .push(bass_drum.clone())
+            )
+            // 14
+            .push(
+                PatternFrame::new()
+                    .push(cowbell.clone())
+                    // .push(clap.clone())
+                    // .push(hat.clone())
+                    // .push(snare.clone())
+                    // .push(bass_drum.clone())
+            )
+            .push(
+                PatternFrame::new()
+                    .push(cowbell.clone())
+                    // .push(clap.clone())
+                    .push(hat.clone())
+                    // .push(snare.clone())
+                    // .push(bass_drum.clone())
+            )
+            // 16
+            .push(
+                PatternFrame::new()
+                    .push(cowbell.clone())
+                    // .push(clap.clone())
+                    .push(hat.clone())
+                    // .push(snare.clone())
+                    // .push(bass_drum.clone())
+            )
+            .push(
+                PatternFrame::new()
+                    .push(cowbell.clone())
+                    .push(clap.clone())
+                    // .push(hat.clone())
+                    // .push(snare.clone())
+                    .push(bass_drum.clone())
+            )
+            // 18
+            .push(
+                PatternFrame::new()
+                    // .push(cowbell.clone())
+                    // .push(clap.clone())
+                    // .push(hat.clone())
+                    // .push(snare.clone())
+                    // .push(bass_drum.clone())
+            )
+            .push(
+                PatternFrame::new()
+                    .push(cowbell.clone())
+                    .push(clap.clone())
+                    .push(hat.clone())
+                    // .push(snare.clone())
+                    // .push(bass_drum.clone())
+            )
+            // 20
+            .push(
+                PatternFrame::new()
+                    // .push(cowbell.clone())
+                    // .push(clap.clone())
+                    .push(hat.clone())
+                    // .push(snare.clone())
+                    // .push(bass_drum.clone())
+            )
+            .push(
+                PatternFrame::new()
+                    .push(cowbell.clone())
+                    // .push(clap.clone())
+                    // .push(hat.clone())
+                    .push(snare_linn.clone())
+                    .push(bass_drum.clone())
+            )
+            // 22
+            .push(
+                PatternFrame::new()
+                    // .push(cowbell.clone())
+                    // .push(clap.clone())
+                    // .push(hat.clone())
+                    // .push(snare.clone())
+                    // .push(bass_drum.clone())
+            )
+            .push(
+                PatternFrame::new()
+                    .push(cowbell.clone())
+                    .push(clap.clone())
+                    .push(hat.clone())
+                    // .push(snare.clone())
+                    // .push(bass_drum.clone())
+            )
+            // 24
+            .push(
+                PatternFrame::new()
+                    .push(cowbell.clone())
+                    .push(clap.clone())
+                    .push(hat.clone())
+                    // .push(snare.clone())
+                    // .push(bass_drum.clone())
+            )
+            .push(
+                PatternFrame::new()
+                    // .push(cowbell.clone())
+                    .push(clap.clone())
+                    // .push(hat.clone())
+                    // .push(snare.clone())
+                    .push(bass_drum.clone())
+            )
+            // 26
+            .push(
+                PatternFrame::new()
+                    .push(cowbell.clone())
+                    .push(clap.clone())
+                    // .push(hat.clone())
+                    // .push(snare.clone())
+                    // .push(bass_drum.clone())
+            )
+            .push(
+                PatternFrame::new()
+                    .push(cowbell.clone())
+                    .push(clap.clone())
+                    .push(hat.clone())
+                    // .push(snare.clone())
+                    // .push(bass_drum.clone())
+            )
+            // 28
+            .push(
+                PatternFrame::new()
+                    .push(cowbell.clone())
+                    .push(clap.clone())
+                    .push(hat.clone())
+                    // .push(snare.clone())
+                    // .push(bass_drum.clone())
+            )
+            .push(
+                PatternFrame::new()
+                    .push(cowbell.clone())
+                    .push(clap.clone())
+                    // .push(hat.clone())
+                    .push(snare_linn.clone())
+                    .push(bass_drum.clone())
+            )
+            // 30
+            .push(
+                PatternFrame::new()
+                    .push(cowbell.clone())
+                    // .push(clap.clone())
+                    // .push(hat.clone())
+                    // .push(snare.clone())
+                    // .push(bass_drum.clone())
+            )
+            .push(
+                PatternFrame::new()
+                    .push(cowbell.clone())
+                    // .push(clap.clone())
+                    .push(hat.clone())
+                    // .push(snare.clone())
+                    // .push(bass_drum.clone())
+            )
+            .push(
+                PatternFrame::new()
+                    .push(cowbell.clone())
+                    // .push(clap.clone())
+                    .push(hat.clone())
+                    // .push(snare.clone())
+                    // .push(bass_drum.clone())
+            );
+            
+            let mut patterns = pattern();
+
+            (0..4).for_each(|_| patterns.merge(pattern()));
+
+            patterns.play(&handle, 64);
+            handle.send(Event::Clear);
+    }
+
+    
+    pub struct Pattern {
+        pattern: Vec<PatternFrame>,
+        tick: usize,
+    }
+
+    impl Pattern {
+        pub fn new() -> Self {
+            Self {
+                pattern: Vec::new(),
+                tick: 0,
             }
-            play_crash()
         }
 
-        println!("playing jungle beat");
-        sleep_ms(500);
+        pub fn merge(&mut self, other: Self) {
+            self.pattern.extend(other.pattern);
 
-        play_jungle();
-        sleep_ms(250);
-
-        for _ in 0..2 {
-            clear_handles();
-            play_jungle();
-            sleep_ms(128);
         }
 
-        for _ in 0..2 {
-            clear_handles();
-            play_jungle();
-            sleep_ms(256);
+        pub fn push(mut self, pattern: PatternFrame) -> Self {
+            self.pattern.push(pattern);
+            self
         }
 
-        clear_handles();
-        play_jungle();
-        sleep_ms(3500);
+        pub fn push_empty(mut self) -> Self {
+            self.pattern.push(PatternFrame::new());
+            self
+        }
+        pub fn play(mut self, engine: &EngineHandle, bpm: u16) {
+            if self.tick >= self.pattern.len() {
+                self.tick = 0;
+            }
+            // dbg!(self.pattern.len());
+            for track in self.pattern {
+                for handle in track.frame {
+                    engine.send(Event::PushPlayHandle(handle));
 
-        clear_handles();
-        play_jungle();
-        sleep_ms(256);
+                }
+                std::thread::sleep(Duration::from_millis(((60.0/bpm as f32) * 4.0 * 60.0) as u64));
+            }
+           
+        }
+    }
 
-        for _ in 0..3 {
-            clear_handles();
-            play_jungle();
-            sleep_ms(5580);
+    pub struct PatternFrame {
+        pub frame: Vec<Box<dyn PlayHandle>>
+    }
+
+    impl PatternFrame {
+        pub fn new() -> Self {
+            Self { frame: Vec::new() }
+        }
+
+        pub fn push(mut self, handle: impl PlayHandle + 'static) -> Self {
+            self.frame.push(Box::new(handle));
+            self
+
         }
     }
 }
+
+

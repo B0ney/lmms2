@@ -15,6 +15,18 @@ pub trait PlayHandle: Send + Sync {
     fn jump(&mut self, tick: usize);
 }
 
+impl PlayHandle for Box<dyn PlayHandle> {
+    fn next(&mut self) -> Option<[f32; 2]> {
+        (**self).next()
+    }
+    fn reset(&mut self) {
+        (**self).reset()
+    }
+    fn jump(&mut self, tick: usize) {
+        (**self).jump(tick)
+    }
+}
+
 pub trait FrameModifier {
     fn clamp(self) -> Self;
     fn amplify(self, value: f32) -> Self;
