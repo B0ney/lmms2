@@ -1,13 +1,17 @@
 use std::{
     collections::HashSet,
-    sync::{mpsc, Arc},
+    sync::{
+        atomic::{AtomicUsize, Ordering, AtomicU32},
+        mpsc, Arc,
+    },
 };
 
 use crate::core::cpal::CpalOutputDevice;
 
 use super::{
-    traits::{AudioInputDevice, AudioOutputDevice, PlayHandle, FrameModifier},
-    SampleCache, event::Event,
+    event::Event,
+    traits::{AudioInputDevice, AudioOutputDevice, FrameModifier, PlayHandle},
+    SampleCache,
 };
 
 const DEFAULT_RATE: usize = 44100;
@@ -21,7 +25,6 @@ pub type Frame = [f32; DEFAULT_CHANNELS];
 ///
 /// (BUFFER_SIZE / SAMPLE_RATE) * 1000
 const DEFAULT_BUFFER_SIZE: usize = 2048;
-
 
 struct MidiOutputDevice {}
 
@@ -57,8 +60,7 @@ struct Dummy;
 
 impl AudioInputDevice for Dummy {}
 impl AudioOutputDevice for Dummy {
-    fn init(handle: EngineHandle) -> Option<Box<Self>>
-    {
+    fn init(handle: EngineHandle) -> Option<Box<Self>> {
         Some(Box::new(Self))
     }
 
@@ -77,14 +79,17 @@ pub struct Mixer;
 #[derive(Clone)]
 pub struct EngineHandle {
     tx: mpsc::Sender<Event>,
+    engine_rate: Arc<AtomicU32>,
 }
 
 impl EngineHandle {
     pub fn send(&self, event: Event) {
         self.tx.send(event);
     }
+    pub fn output_device_sample_rate(&self) -> u32 {
+        self.engine_rate.load(Ordering::Relaxed)
+    }
 }
-
 
 /*
 TODO: inlcude Time somewhere
@@ -105,7 +110,6 @@ pub struct AudioEngine {
 
     // midi_in: HashSet<Arc<MidiInputDevice>>,
     // midi_out: HashSet<Arc<MidiOutputDevice>>,
-
     /// The output device is where audio data is streamed to.
     /// Can be changed at runtime
     output_device: Box<dyn AudioOutputDevice>,
@@ -118,31 +122,39 @@ pub struct AudioEngine {
     // resampler: Option<Resampler>,
 
     // rb_consumber: rb::Consumer<Event>,
-
     pub sample_cache: SampleCache,
     mixer: Mixer,
 
-    handles: Vec<Box<dyn PlayHandle>>
+    handles: Vec<Box<dyn PlayHandle>>,
 }
 
 impl AudioEngine {
     fn init(handle: EngineHandle) -> Self {
-        let output_device: Box<dyn AudioOutputDevice> = match CpalOutputDevice::init(handle.clone()) {
+        let output_device: Box<dyn AudioOutputDevice> = match CpalOutputDevice::init(handle.clone())
+        {
             Some(device) => device,
             None => Dummy::init(handle.clone()).expect("Dummy should be infallible"),
         };
+
+        handle
+            .engine_rate
+            .store(output_device.rate(), Ordering::Relaxed);
 
         Self {
             output_device,
             sample_cache: SampleCache::default(),
             mixer: Mixer,
             handles: Vec::with_capacity(128),
-        }        
+        }
     }
 
     pub fn new() -> EngineHandle {
         let (tx, rx) = std::sync::mpsc::channel::<Event>();
-        let handle = EngineHandle { tx };
+        let engine_rate = Arc::new(AtomicU32::new(44100));
+        let handle = EngineHandle {
+            tx,
+            engine_rate: engine_rate.clone(),
+        };
 
         let audio_handle = handle.clone();
         std::thread::spawn(move || {
@@ -187,7 +199,5 @@ impl AudioEngine {
             Event::Clear => self.handles.clear(),
         }
     }
-
-
 }
 struct Resampler;

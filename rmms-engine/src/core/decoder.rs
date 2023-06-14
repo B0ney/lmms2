@@ -126,7 +126,7 @@ impl SymphoniaDecoder {
         }
         
         let mut sample = RmmsSampleBuffer::new(out_buffer, rate);
-        crate::core::dsp::resample(&mut sample, 44100);
+        // crate::core::dsp::resample(&mut sample, 44100);
         sample
     }
 
@@ -190,6 +190,8 @@ fn output_to_wav(audio_data: &RmmsSampleBuffer, file: impl AsRef<Path>) {
     }
 }
 
+
+
 /// cargo test --release --package rmms-engine --lib -- core::decoder::tests --nocapture
 // #[cfg(test)]
 mod tests {
@@ -201,44 +203,47 @@ mod tests {
 
     #[test]
     fn h() {
+        let handle = AudioEngine::new();
+        let engine_rate = handle.output_device_sample_rate();
+
         let cache = SampleCache::new();
         let kick = cache.add(
             "kick",
-            SymphoniaDecoder::load_from_file("../audio/kick.wav"),
+            SymphoniaDecoder::load_from_file("../audio/kick.wav").resample(engine_rate),
         );
         let snare = cache.add(
             "snare",
-            SymphoniaDecoder::load_from_file("../audio/snare.wav"),
+            SymphoniaDecoder::load_from_file("../audio/snare.wav").resample(engine_rate),
         );
         let crash = cache.add(
             "crash",
-            SymphoniaDecoder::load_from_file("../audio/crash_5.wav"),
+            SymphoniaDecoder::load_from_file("../audio/crash_5.wav").resample(engine_rate),
         );
         let jungle = cache.add(
             "jungle",
-            SymphoniaDecoder::load_from_file("../audio/jungle.wav"),
+            SymphoniaDecoder::load_from_file("../audio/jungle.wav").resample(engine_rate),
         );
 
 
         let cowbell = cache.add(
             "cowbell",
-            SymphoniaDecoder::load_from_file("../audio/linndrum/cowb.wav"),
+            SymphoniaDecoder::load_from_file("../audio/linndrum/cowb.wav").resample(engine_rate),
         );
         let clap = cache.add(
             "clap",
-            SymphoniaDecoder::load_from_file("../audio/linndrum/clap.wav"),
+            SymphoniaDecoder::load_from_file("../audio/linndrum/clap.wav").resample(engine_rate),
         );
         let hat = cache.add(
             "hat",
-            SymphoniaDecoder::load_from_file("../audio/linndrum/chhs.wav"),
+            SymphoniaDecoder::load_from_file("../audio/linndrum/chhs.wav").resample(engine_rate),
         );
         let snare_linn = cache.add(
             "snare_linn",
-            SymphoniaDecoder::load_from_file("../audio/linndrum/sd.wav"),
+            SymphoniaDecoder::load_from_file("../audio/linndrum/sdl.wav").resample(engine_rate),
         );
         let bass_drum = cache.add(
             "kick",
-            SymphoniaDecoder::load_from_file("../audio/linndrum/kick.wav"),
+            SymphoniaDecoder::load_from_file("../audio/linndrum/kick.wav").resample(engine_rate),
         );
 
 
@@ -263,7 +268,7 @@ mod tests {
 
         let jungle_l = Panner::new(jungle.clone(),-0.0);
 
-        let handle = AudioEngine::new();
+        
 
         let send = |sample: Sample, msg: &str| {
             handle.send(Event::play_handle(sample));
@@ -570,9 +575,9 @@ mod tests {
             
             let mut patterns = pattern();
 
-            (0..4).for_each(|_| patterns.merge(pattern()));
+            (0..7).for_each(|_| patterns.merge(pattern()));
 
-            patterns.play(&handle, 64);
+            patterns.play(&handle, 128);
             handle.send(Event::Clear);
     }
 
@@ -609,11 +614,11 @@ mod tests {
                 self.tick = 0;
             }
             // dbg!(self.pattern.len());
-            for track in self.pattern {
+            for (index, track) in self.pattern.into_iter().enumerate() {
                 for handle in track.frame {
                     engine.send(Event::PushPlayHandle(handle));
-
                 }
+                // println!("playing pattern: {index}");
                 std::thread::sleep(Duration::from_millis(((60.0/bpm as f32) * 4.0 * 60.0) as u64));
             }
            

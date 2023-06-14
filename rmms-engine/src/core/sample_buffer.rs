@@ -8,7 +8,7 @@ use std::{
 
 use parking_lot::RwLock;
 
-use super::SampleCache;
+use super::{SampleCache, dsp};
 
 pub struct Mixer {}
 
@@ -86,6 +86,11 @@ impl SampleBuffer {
     }
 
     pub fn reverse(&mut self) {}
+
+    pub fn resample(mut self, target_rate: u32) -> Self {
+        dsp::resample(&mut self, target_rate);
+        self
+    }
 }
 
 impl Debug for SampleBuffer {
