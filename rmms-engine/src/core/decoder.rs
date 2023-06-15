@@ -286,57 +286,57 @@ mod tests {
 
         sleep_ms(500);
 
-        // println!("drums");
-        // for _ in 0..5 {
-        //     for _ in 0..4 {
-        //         play_kick();
-        //         sleep_ms(256);
+        println!("drums");
+        for _ in 0..5 {
+            for _ in 0..4 {
+                play_kick();
+                sleep_ms(256);
 
-        //         play_snare();
-        //         sleep_ms(256);
+                play_snare();
+                sleep_ms(256);
 
-        //         play_kick();
-        //         sleep_ms(128);
-        //         play_kick();
-        //         sleep_ms(128);
+                play_kick();
+                sleep_ms(128);
+                play_kick();
+                sleep_ms(128);
 
-        //         play_snare();
-        //         sleep_ms(256);
-        //     }
-        //     play_crash()
-        // }
+                play_snare();
+                sleep_ms(256);
+            }
+            play_crash()
+        }
 
-        // println!("playing jungle beat");
-        // sleep_ms(500);
+        println!("playing jungle beat");
+        sleep_ms(500);
 
-        // play_jungle();
-        // sleep_ms(250);
+        play_jungle();
+        sleep_ms(250);
 
-        // for _ in 0..2 {
-        //     clear_handles();
-        //     play_jungle();
-        //     sleep_ms(128);
-        // }
+        for _ in 0..2 {
+            clear_handles();
+            play_jungle();
+            sleep_ms(128);
+        }
 
-        // for _ in 0..2 {
-        //     clear_handles();
-        //     play_jungle();
-        //     sleep_ms(256);
-        // }
+        for _ in 0..2 {
+            clear_handles();
+            play_jungle();
+            sleep_ms(256);
+        }
 
-        // clear_handles();
-        // play_jungle();
-        // sleep_ms(3500);
+        clear_handles();
+        play_jungle();
+        sleep_ms(3500);
 
-        // clear_handles();
-        // play_jungle();
-        // sleep_ms(256);
+        clear_handles();
+        play_jungle();
+        sleep_ms(256);
 
-        // for _ in 0..3 {
-        //     clear_handles();
-        //     play_jungle();
-        //     sleep_ms(5580);
-        // }
+        for _ in 0..3 {
+            clear_handles();
+            play_jungle();
+            sleep_ms(5580);
+        }
 
 
 
@@ -577,7 +577,7 @@ mod tests {
 
             (0..7).for_each(|_| patterns.merge(pattern()));
 
-            patterns.play(&handle, 128);
+            patterns.play(&handle, 128.0);
             handle.send(Event::Clear);
     }
 
@@ -609,7 +609,7 @@ mod tests {
             self.pattern.push(PatternFrame::new());
             self
         }
-        pub fn play(mut self, engine: &EngineHandle, bpm: u16) {
+        pub fn play(mut self, engine: &EngineHandle, bpm: f32) {
             if self.tick >= self.pattern.len() {
                 self.tick = 0;
             }
@@ -618,7 +618,7 @@ mod tests {
                 for handle in track.frame {
                     engine.send(Event::PushPlayHandle(handle));
                 }
-                // println!("playing pattern: {index}");
+                println!("playing pattern: {index}");
                 std::thread::sleep(Duration::from_millis(((60.0/bpm as f32) * 4.0 * 60.0) as u64));
             }
            

@@ -1,6 +1,6 @@
 use std::f32::consts::PI;
 
-use crate::core::traits::PlayHandle;
+use crate::core::{traits::PlayHandle, SampleBuffer};
 
 pub struct Resampler<H: PlayHandle>
 {

@@ -188,7 +188,7 @@ impl AudioEngine {
             index += 1;
         }
 
-        self.output_device.write(&[frame.amplify(0.25).clamp()]);
+        self.output_device.write(&[frame.amplify(0.75).clamp()]);
     }
 
     pub fn handle_event(&mut self, event: Event) {
