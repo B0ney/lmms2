@@ -195,7 +195,7 @@ fn output_to_wav(audio_data: &RmmsSampleBuffer, file: impl AsRef<Path>) {
 /// cargo test --release --package rmms-engine --lib -- core::decoder::tests --nocapture
 // #[cfg(test)]
 mod tests {
-    use std::time::Duration;
+    use std::{time::Duration, clone};
 
     use crate::core::{engine::{AudioEngine, EngineHandle}, event::Event, sample::Sample, SampleCache, handles::resampler::Panner, traits::PlayHandle};
 
@@ -203,26 +203,36 @@ mod tests {
 
     #[test]
     fn h() {
+        let sleep_ms = |time: u64| std::thread::sleep(Duration::from_millis(time));
+        // let clear_handles = || handle.send(Event::Clear);
+
+       
+
         let handle = AudioEngine::new();
-        let engine_rate = handle.output_device_sample_rate();
+
+        sleep_ms(500);
+
+        let engine_rate = dbg!(handle.output_device_sample_rate());
+
+        // return;
 
         let cache = SampleCache::new();
-        let kick = cache.add(
-            "kick",
-            SymphoniaDecoder::load_from_file("../audio/kick.wav").resample(engine_rate),
-        );
-        let snare = cache.add(
-            "snare",
-            SymphoniaDecoder::load_from_file("../audio/snare.wav").resample(engine_rate),
-        );
-        let crash = cache.add(
-            "crash",
-            SymphoniaDecoder::load_from_file("../audio/crash_5.wav").resample(engine_rate),
-        );
-        let jungle = cache.add(
-            "jungle",
-            SymphoniaDecoder::load_from_file("../audio/jungle.wav").resample(engine_rate),
-        );
+        // let kick = cache.add(
+        //     "kick",
+        //     SymphoniaDecoder::load_from_file("../audio/kick.wav").resample(engine_rate),
+        // );
+        // let snare = cache.add(
+        //     "snare",
+        //     SymphoniaDecoder::load_from_file("../audio/snare.wav").resample(engine_rate),
+        // );
+        // let crash = cache.add(
+        //     "crash",
+        //     SymphoniaDecoder::load_from_file("../audio/crash_5.wav").resample(engine_rate),
+        // );
+        // let jungle = cache.add(
+        //     "jungle",
+        //     SymphoniaDecoder::load_from_file("../audio/jungle.wav").resample(engine_rate),
+        // );
 
 
         let cowbell = cache.add(
@@ -249,10 +259,10 @@ mod tests {
 
 
 
-        let kick = Sample::new(kick);
-        let snare = Sample::new(snare);
-        let crash = Sample::new(crash);
-        let jungle = Sample::new(jungle);
+        // let kick = Sample::new(kick);
+        // let snare = Sample::new(snare);
+        // let crash = Sample::new(crash);
+        // let jungle = Sample::new(jungle);
 
         let cowbell = Sample::new(cowbell);
         let clap = Sample::new(clap);
@@ -266,81 +276,78 @@ mod tests {
 
 
 
-        let jungle_l = Panner::new(jungle.clone(),-0.0);
+        // let jungle_l = Panner::new(jungle.clone(),-0.0);
 
         
 
-        let send = |sample: Sample, msg: &str| {
-            handle.send(Event::play_handle(sample));
-            println!("{msg}"); // Don't use this in time critical events like this
-        };
+        // let send = |sample: Sample, msg: &str| {
+        //     handle.send(Event::play_handle(sample));
+        //     println!("{msg}"); // Don't use this in time critical events like this
+        // };
 
-        let play_kick = || send(kick.clone(), "kick");
-        let play_snare = || send(snare.clone(), "   snare");
-        let play_crash = || send(crash.clone(), "       crash");
-        let play_jungle = || send(jungle.clone(), "jungle");
-        let play_jungle = || handle.send(Event::play_handle(jungle_l.clone()));
+        // let play_kick = || send(kick.clone(), "kick");
+        // let play_snare = || send(snare.clone(), "   snare");
+        // let play_crash = || send(crash.clone(), "       crash");
+        // let play_jungle = || send(jungle.clone(), "jungle");
+        // let play_jungle = || handle.send(Event::play_handle(jungle_l.clone()));
 
-        let sleep_ms = |time: u64| std::thread::sleep(Duration::from_millis(time));
-        let clear_handles = || handle.send(Event::Clear);
+        
 
-        sleep_ms(500);
+        // println!("drums");
+        // for _ in 0..5 {
+        //     for _ in 0..4 {
+        //         play_kick();
+        //         sleep_ms(256);
 
-        println!("drums");
-        for _ in 0..5 {
-            for _ in 0..4 {
-                play_kick();
-                sleep_ms(256);
+        //         play_snare();
+        //         sleep_ms(256);
 
-                play_snare();
-                sleep_ms(256);
+        //         play_kick();
+        //         sleep_ms(128);
+        //         play_kick();
+        //         sleep_ms(128);
 
-                play_kick();
-                sleep_ms(128);
-                play_kick();
-                sleep_ms(128);
+        //         play_snare();
+        //         sleep_ms(256);
+        //     }
+        //     play_crash()
+        // }
 
-                play_snare();
-                sleep_ms(256);
-            }
-            play_crash()
-        }
+        // println!("playing jungle beat");
+        // sleep_ms(500);
 
-        println!("playing jungle beat");
-        sleep_ms(500);
+        // play_jungle();
+        // sleep_ms(250);
 
-        play_jungle();
-        sleep_ms(250);
+        // for _ in 0..2 {
+        //     clear_handles();
+        //     play_jungle();
+        //     sleep_ms(128);
+        // }
 
-        for _ in 0..2 {
-            clear_handles();
-            play_jungle();
-            sleep_ms(128);
-        }
+        // for _ in 0..2 {
+        //     clear_handles();
+        //     play_jungle();
+        //     sleep_ms(256);
+        // }
 
-        for _ in 0..2 {
-            clear_handles();
-            play_jungle();
-            sleep_ms(256);
-        }
+        // clear_handles();
+        // play_jungle();
+        // sleep_ms(3500);
 
-        clear_handles();
-        play_jungle();
-        sleep_ms(3500);
+        // clear_handles();
+        // play_jungle();
+        // sleep_ms(256);
 
-        clear_handles();
-        play_jungle();
-        sleep_ms(256);
-
-        for _ in 0..3 {
-            clear_handles();
-            play_jungle();
-            sleep_ms(5580);
-        }
+        // for _ in 0..3 {
+        //     clear_handles();
+        //     play_jungle();
+        //     sleep_ms(5580);
+        // }
 
 
 
-        let pattern = || Pattern::new()
+        let pattern = move || Pattern::new()
             .push(
                 PatternFrame::new()
                     .push(cowbell.clone())
@@ -574,8 +581,21 @@ mod tests {
             );
             
             let mut patterns = pattern();
-
             (0..7).for_each(|_| patterns.merge(pattern()));
+
+
+
+            let h2 = handle.clone(  );
+            std::thread::spawn(move || {
+                // sleep_ms(500);
+                let mut patterns = pattern();
+                (0..7).for_each(|_| patterns.merge(pattern()));
+
+                patterns.play(&h2, 128.63333);
+                h2.send(Event::Clear);
+            });
+
+           
 
             patterns.play(&handle, 128.0);
             handle.send(Event::Clear);
@@ -618,8 +638,10 @@ mod tests {
                 for handle in track.frame {
                     engine.send(Event::PushPlayHandle(handle));
                 }
-                println!("playing pattern: {index}");
-                std::thread::sleep(Duration::from_millis(((60.0/bpm as f32) * 4.0 * 60.0) as u64));
+                // println!("playing pattern: {index}");
+                // /// thread::sleep has very poor accuracy on windows
+                // std::thread::sleep(Duration::from_millis(((60.0/bpm as f32) * 4.0 * 60.0) as u64));
+                spin_sleep::sleep(Duration::from_millis(((60.0 / bpm as f32) * 4.0 * 60.0) as u64));
             }
            
         }
@@ -640,6 +662,16 @@ mod tests {
 
         }
     }
+
+    // pub fn spin_sleep(duration: Duration) {
+    //     let time = std::time::Instant::now();
+
+        
+    //     while time.elapsed() < duration { 
+    //         std::thread::yield_now()
+    //     }
+        
+    // }
 }
 
 
