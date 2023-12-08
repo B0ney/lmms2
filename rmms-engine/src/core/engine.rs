@@ -10,9 +10,10 @@ use crate::core::cpal::CpalOutputDevice;
 
 use super::{
     event::Event,
-    traits::{AudioInputDevice, AudioOutputDevice, FrameModifier, PlayHandle},
+    traits::{AudioInputDevice, AudioOutputDevice, FrameModifier},
     SampleCache,
 };
+use super::handles::PlayHandle;
 
 const DEFAULT_RATE: usize = 44100;
 const DEFAULT_CHANNELS: usize = 2;

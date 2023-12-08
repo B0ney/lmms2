@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
-use super::{engine::Frame, SampleBuffer, SampleCache, traits::PlayHandle};
+use super::{engine::Frame, SampleBuffer, SampleCache};
+use super::handles::PlayHandle;
 
 #[derive(Clone)]
 pub struct Sample {
@@ -94,11 +95,7 @@ impl PlayHandle for Sample {
 
     }
 
-    fn reset(&mut self) {
-        todo!()
-    }
-
-    fn jump(&mut self, tick: usize) {
-        todo!()
+    fn is_complete(&self) -> bool {
+        (self.start + self.current_frame) >= self.buffer.frames()
     }
 }

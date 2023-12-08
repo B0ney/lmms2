@@ -1,4 +1,4 @@
-use super::traits::PlayHandle;
+use super::handles::PlayHandle;
 
 pub enum Event {
     RequestAudioDeviceReset,

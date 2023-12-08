@@ -1,52 +1,46 @@
-use std::f32::consts::PI;
+use super::PlayHandle;
 
-use crate::core::{traits::PlayHandle, SampleBuffer};
-
-pub struct Resampler<H: PlayHandle>
-{
-    handle: H,
-    buffer: Vec<[f32; 2]>
+/// Generic resampler for playhandles
+pub struct Resampler {
+    resapler: Box<rubato::SincFixedIn<f32>>,
+    handle: Box<dyn PlayHandle>,
+    input: Vec<Vec<f32>>,
+    output: Vec<Vec<f32>>,
+    frame: usize,
 }
 
-#[derive(Clone)]
-pub struct Panner<H: PlayHandle> {
-    handle: H,
-    panning: f32,
-}
+impl Resampler {
+    pub fn new<P: PlayHandle + 'static>(handle: P, source_rate: u32, target_rate: u32) -> Self {
+        let ratio = source_rate as f64 / target_rate as f64;
 
-impl <H: PlayHandle>Panner<H> {
-    pub fn new(handle: H, mut panning: f32) -> Self {
-        panning = panning.clamp(-1.0, 1.0);
-        Self { handle, panning }
+        Self {
+            resapler: Box::new(rubato::SincFixedIn::<f32>::new(
+                ratio,
+                ratio * 5.0,
+                rubato::InterpolationParameters {
+                    sinc_len: 256,
+                    f_cutoff: 0.95,
+                    oversampling_factor: 128,
+                    interpolation: rubato::InterpolationType::Linear,
+                    window: rubato::WindowFunction::Blackman,
+                },
+                256,
+                2,
+            ).unwrap()),
+            handle: Box::new(handle),
+            input: Vec::new(),
+            output: Vec::new(),
+            frame: 0,
+        }
     }
 }
 
-impl <H: PlayHandle>PlayHandle for Panner<H> {
+impl PlayHandle for Resampler {
+    fn is_complete(&self) -> bool {
+        self.handle.is_complete()
+    }
+
     fn next(&mut self) -> Option<[f32; 2]> {
-        let mut frame = self.handle.next()?;
-
-        let (l,r) = calculate_ratio(self.panning);
-
-        frame[0] *= l;
-        frame[1] *= r;
-
-        Some(frame)
-    }
-
-    fn reset(&mut self) {
-        self.handle.reset()
-    }
-
-    fn jump(&mut self, tick: usize) {
-        self.handle.jump(tick)
+        todo!()
     }
 }
-
-fn calculate_ratio(panning: f32) -> (f32, f32) {
-    let phi = (panning + 1.0) * 0.25 * PI;
-    let left = phi.cos();
-    let right = phi.sin();
-
-    (left, right)
-}
-
