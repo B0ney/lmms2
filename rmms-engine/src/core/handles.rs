@@ -1,25 +1,37 @@
 pub mod file;
+pub mod note;
 pub mod panner;
 pub mod resampler;
-pub mod note;
+mod metronome;
 
 pub trait PlayHandle: Send + 'static {
+    /// Indicate that this playhandle will no longer produce frames.
     fn is_complete(&self) -> bool;
+
+    /// Produce the next frame.
+    /// 
+    /// Returns None if the playhandle has terminated.
     fn next(&mut self) -> Option<[f32; 2]>;
-    fn render(&mut self, frames: &mut [[f32; 2]]) -> Option<usize> {
+    
+    /// Write frames into a buffer.
+    /// 
+    /// Returns how many frames were written.
+    fn render(&mut self, frames: &mut [[f32; 2]]) -> usize {
         let mut written: usize = 0;
 
         for frame in frames.iter_mut() {
-            match self.next() {
-                Some(f) => {
-                    frame[0] += f[0]; // todo: mix or overwrite?
-                    frame[1] += f[1];
-                    written += 1;
-                }
-                None => {}
-            }
+            let Some([l, r]) = self.next() else { 
+                break 
+            };
+
+            let [out_l, out_r] = frame;
+
+            *out_l += l; // todo: mix or overwrite?
+            *out_r += r;
+
+            written += 1;
         }
-        Some(written)
+        written
     }
 }
 
@@ -34,24 +46,20 @@ impl PlayHandle for Box<dyn PlayHandle> {
 }
 
 
-
 pub trait PlayHandleChain: Sized {
     fn chain<F, P>(self, other: F) -> P
     where
         F: FnOnce(Self) -> P,
-        P: PlayHandle
+        P: PlayHandle,
     {
         other(self)
     }
 }
 
-impl <P: PlayHandle>PlayHandleChain for P {}
-
-
-
+impl<P: PlayHandle> PlayHandleChain for P {}
 
 struct Handle {
-    playhandle: Box<dyn PlayHandle>
+    playhandle: Box<dyn PlayHandle>,
 }
 
 impl PlayHandle for Handle {
@@ -64,9 +72,8 @@ impl PlayHandle for Handle {
     }
 }
 
-
 impl Handle {
-    // pub fn map(self, f impl Fn(Self) -> B) 
+    // pub fn map(self, f impl Fn(Self) -> B)
 }
 
 // impl From

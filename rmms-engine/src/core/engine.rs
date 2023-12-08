@@ -172,24 +172,32 @@ impl AudioEngine {
     }
 
     pub fn tick(&mut self) {
+        let mut frames = [[0_f32; 2]; 1];
         let mut frame: Frame = [0.0, 0.0];
         let mut index: usize = 0;
 
         while index < self.handles.len() {
             let handle = &mut self.handles[index];
 
-            let Some(next_frame) = handle.next() else {
+
+            if handle.render(&mut frames) == 0 && handle.is_complete() {
                 self.handles.swap_remove(index);
                 continue;
-            };
+            }            
 
-            frame[0] += next_frame[0];
-            frame[1] += next_frame[1];
+            // let Some(next_frame) = handle.next() else {
+            //     self.handles.swap_remove(index);
+            //     continue;
+            // };
+
+
+            // frame[0] += next_frame[0];
+            // frame[1] += next_frame[1];
 
             index += 1;
         }
 
-        self.output_device.write(&[frame.amplify(0.75).clamp()]);
+        self.output_device.write(&frames.map(|f| f.amplify(0.75).clamp()));
     }
 
     pub fn handle_event(&mut self, event: Event) {

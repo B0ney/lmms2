@@ -9,8 +9,6 @@ pub trait AudioOutputDevice {
     fn write(&mut self, chunk: &[[f32; 2]]);
 }
 
-
-
 pub trait FrameModifier {
     fn clamp(self) -> Self;
     fn amplify(self, value: f32) -> Self;

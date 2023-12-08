@@ -1,8 +1,10 @@
+use rubato::Resampler as SyncResampler;
+
 use super::PlayHandle;
 
 /// Generic resampler for playhandles
 pub struct Resampler {
-    resapler: Box<rubato::SincFixedIn<f32>>,
+    resampler: rubato::SincFixedIn<f32>,
     handle: Box<dyn PlayHandle>,
     input: Vec<Vec<f32>>,
     output: Vec<Vec<f32>>,
@@ -10,11 +12,11 @@ pub struct Resampler {
 }
 
 impl Resampler {
-    pub fn new<P: PlayHandle + 'static>(handle: P, source_rate: u32, target_rate: u32) -> Self {
+    pub fn new(handle: impl PlayHandle, source_rate: u32, target_rate: u32) -> Self {
         let ratio = source_rate as f64 / target_rate as f64;
 
         Self {
-            resapler: Box::new(rubato::SincFixedIn::<f32>::new(
+            resampler: rubato::SincFixedIn::<f32>::new(
                 ratio,
                 ratio * 5.0,
                 rubato::InterpolationParameters {
@@ -26,7 +28,7 @@ impl Resampler {
                 },
                 256,
                 2,
-            ).unwrap()),
+            ).unwrap(),
             handle: Box::new(handle),
             input: Vec::new(),
             output: Vec::new(),
@@ -41,6 +43,16 @@ impl PlayHandle for Resampler {
     }
 
     fn next(&mut self) -> Option<[f32; 2]> {
+        // read frames from playhandle into buffer
+
+        // self.handle.render(frames);
+
+
+        self.resampler.process_into_buffer(
+            &mut self.input, 
+            &mut self.output, 
+            None
+        );
         todo!()
     }
 }
