@@ -12,6 +12,7 @@ pub mod note;
 pub mod sample;
 pub mod sample_buffer;
 pub mod traits;
+pub mod graph;
 
 pub use sample_buffer::SampleBuffer;
 pub type SampleCache = cache::Cache<String, SampleBuffer>;

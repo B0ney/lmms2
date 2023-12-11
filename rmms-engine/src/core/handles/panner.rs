@@ -1,28 +1,35 @@
 use std::f32::consts::PI;
 
-use crate::core::{handles::PlayHandle, SampleBuffer};
+use crate::core::handles::PlayHandle;
 
-pub struct Panner {
-    handle: Box<dyn PlayHandle>,
+pub struct Panner<P: PlayHandle> {
+    handle: P,
     panning: f32,
-    // ratio: (f32, f32),
+    ratio: (f32, f32),
 }
 
-impl Panner {
-    pub fn new(handle: impl PlayHandle, mut panning: f32) -> Self {
+impl <P: PlayHandle>Panner<P> {
+    pub fn new(handle: P, mut panning: f32) -> Self {
         panning = panning.clamp(-1.0, 1.0);
         Self {
-            handle: Box::new(handle),
+            handle,
             panning,
+            ratio: calculate_ratio(panning),
         }
+    }
+
+    pub fn update_panning(&mut self, panning: f32) {
+        let (l, r) = calculate_ratio(self.panning);
+        self.panning = panning;
+        self.ratio = (l, r);
     }
 }
 
-impl PlayHandle for Panner {
+impl <P: PlayHandle>PlayHandle for Panner <P> {
     fn next(&mut self) -> Option<[f32; 2]> {
         let mut frame = self.handle.next()?;
 
-        let (l, r) = calculate_ratio(self.panning);
+        let (l, r) = self.ratio;
 
         frame[0] *= l;
         frame[1] *= r;

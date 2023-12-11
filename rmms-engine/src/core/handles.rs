@@ -2,7 +2,7 @@ pub mod file;
 pub mod note;
 pub mod panner;
 pub mod resampler;
-mod metronome;
+pub mod metronome;
 
 pub trait PlayHandle: Send + 'static {
     /// Indicate that this playhandle will no longer produce frames.
@@ -75,5 +75,3 @@ impl PlayHandle for Handle {
 impl Handle {
     // pub fn map(self, f impl Fn(Self) -> B)
 }
-
-// impl From

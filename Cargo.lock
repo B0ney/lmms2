@@ -1164,6 +1164,7 @@ dependencies = [
  "rayon",
  "rb",
  "rubato",
+ "rustfft",
  "soundfont",
  "spin_sleep",
  "symphonia",
